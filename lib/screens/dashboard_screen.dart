@@ -11,7 +11,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late GoogleMapController mapController;
-  final LatLng _center = const LatLng(47.6062, -122.3321);
+  final LatLng _center = const LatLng(29.378822, 47.999859);
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -43,7 +43,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.location_on, color: Color(0xFF2563EB)),
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Color(0xFF2563EB),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Column(
@@ -51,11 +54,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         const Text(
                           'ProxiAlert',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           'Current: Downtown Seattle',
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
@@ -73,15 +82,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: SizedBox(
-                        height: 200,
+                        height: 400,
                         width: double.infinity,
                         child: GoogleMap(
+                          myLocationEnabled: true,
+                          mapType: MapType.normal,
+                          // mapId: 'AIzaSyBim3hUgjVXFWD5OngjgB0kOpYBvCfgoVc',
                           onMapCreated: _onMapCreated,
                           initialCameraPosition: CameraPosition(
                             target: _center,
-                            zoom: 11.0,
+                            zoom: 14.4746,
                           ),
-                          myLocationEnabled: false,
+                          // myLocationEnabled: false,
                           zoomControlsEnabled: false,
                         ),
                       ),
@@ -90,7 +102,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       bottom: 12,
                       left: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
@@ -98,12 +113,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
                               blurRadius: 4,
-                            )
+                            ),
                           ],
                         ),
                         child: const Text(
                           'LIVE VIEW',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -116,17 +134,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     const Text(
                       'ACTIVE ALERTS',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
                         '3 Nearby',
-                        style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w600, fontSize: 12),
+                        style: TextStyle(
+                          color: Color(0xFF2563EB),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -188,9 +217,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         showSelectedLabels: true,
         showUnselectedLabels: true,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'DASHBOARD'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'DASHBOARD',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'MAP VIEW'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'SETTINGS'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'SETTINGS',
+          ),
         ],
       ),
     );

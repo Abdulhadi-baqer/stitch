@@ -16,9 +16,7 @@ class SmartPlaceReminderApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
         useMaterial3: true,
-        textTheme: GoogleFonts.interTextTheme(
-          Theme.of(context).textTheme,
-        ),
+        textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
       ),
       home: const DashboardScreen(),
       debugShowCheckedModeBanner: false,
