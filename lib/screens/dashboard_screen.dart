@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../widgets/alert_card.dart';
+import '../services/notification_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -214,13 +215,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {},
-      //   backgroundColor: const Color(0xFF2563EB),
-      //   foregroundColor: Colors.white,
-      //   shape: const CircleBorder(),
-      //   child: const Icon(Icons.add),
-      // ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await NotificationService().requestPermissions();
+          await NotificationService().showNotification(
+            title: 'Hello',
+            body: 'I am Abdulhadi from Kuwait',
+          );
+        },
+        backgroundColor: const Color(0xFF2563EB),
+        foregroundColor: Colors.white,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.notifications),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         selectedItemColor: const Color(0xFF2563EB),
