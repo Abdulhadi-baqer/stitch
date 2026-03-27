@@ -30,10 +30,10 @@ class AlertCard extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withAlpha((255 * 0.02).toInt()),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: ListTile(
@@ -55,16 +55,13 @@ class AlertCard extends StatelessWidget {
           children: [
             Icon(Icons.near_me, size: 14, color: Colors.grey.shade500),
             const SizedBox(width: 4),
-            Text(
-              distance,
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
+            Text('100m', style: TextStyle(color: Colors.grey.shade600)),
           ],
         ),
         trailing: Switch(
           value: isActive,
           onChanged: onChanged,
-          activeColor: Colors.white,
+          activeThumbColor: Colors.white,
           activeTrackColor: const Color(0xFF2563EB),
           inactiveThumbColor: Colors.white,
           inactiveTrackColor: Colors.grey.shade300,

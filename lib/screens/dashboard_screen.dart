@@ -4,6 +4,10 @@ import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../widgets/alert_card.dart';
 import '../services/notification_service.dart';
+import '../services/places_service.dart';
+import '../models/cafe.dart';
+import 'package:geolocator/geolocator.dart';
+import 'dart:async';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -21,10 +25,129 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // State for alerts
-  bool groceriesActive = true;
-  bool cafeActive = true;
-  bool libraryActive = false;
-  bool gymActive = false;
+  List<Cafe> nearbyCafes = [];
+  bool isLoadingCafes = true;
+  StreamSubscription<Position>? _positionStreamSubscription;
+  Set<String> notifiedCafeIds = {};
+  Position? currentPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeLocationAndCafes();
+  }
+
+  Future<void> _initializeLocationAndCafes() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        currentPosition = position;
+      });
+
+      final placesService = PlacesService();
+      final cafes = await placesService.getNearbyCafes(
+        position.latitude,
+        position.longitude,
+      );
+
+      for (var cafe in cafes) {
+        cafe.distance = Geolocator.distanceBetween(
+          position.latitude,
+          position.longitude,
+          cafe.lat,
+          cafe.lon,
+        );
+      }
+
+      cafes.sort((a, b) => a.distance.compareTo(b.distance));
+
+      setState(() {
+        nearbyCafes = cafes;
+        isLoadingCafes = false;
+      });
+
+      _startLocationStream();
+    } catch (e) {
+      debugPrint("Error getting location: \$e");
+      setState(() {
+        isLoadingCafes = false;
+      });
+    }
+  }
+
+  void _startLocationStream() {
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 2,
+    );
+
+    _positionStreamSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: locationSettings,
+        ).listen((Position position) {
+          setState(() {
+            currentPosition = position;
+          });
+
+          bool needsUiUpdate = false;
+
+          for (var cafe in nearbyCafes) {
+            final distance = Geolocator.distanceBetween(
+              position.latitude,
+              position.longitude,
+              cafe.lat,
+              cafe.lon,
+            );
+
+            if ((cafe.distance - distance).abs() > 2) {
+              cafe.distance = distance;
+              needsUiUpdate = true;
+            }
+
+            if (distance <= 5.0 && !notifiedCafeIds.contains(cafe.id)) {
+              notifiedCafeIds.add(cafe.id);
+              NotificationService().showNotification(
+                id: cafe.id.hashCode,
+                title: '\${cafe.name} is incredibly close!',
+                body:
+                    'You are within 5 meters of \${cafe.name}. Time for a coffee?',
+              );
+            }
+          }
+
+          if (needsUiUpdate) {
+            setState(() {
+              nearbyCafes.sort((a, b) => a.distance.compareTo(b.distance));
+            });
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,33 +223,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                     ),
-                    Positioned(
-                      bottom: 12,
-                      left: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: const Text(
-                          'LIVE VIEW',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
+
+                    // Positioned(
+                    //   bottom: 12,
+                    //   left: 12,
+                    //   child: Container(
+                    //     padding: const EdgeInsets.symmetric(
+                    //       horizontal: 12,
+                    //       vertical: 6,
+                    //     ),
+                    //     decoration: BoxDecoration(
+                    //       color: Colors.white,
+                    //       borderRadius: BorderRadius.circular(8),
+                    //       boxShadow: [
+                    //         BoxShadow(
+                    //           color: Colors.black.withAlpha(
+                    //             (255 * 0.1).toInt(),
+                    //           ),
+                    //           blurRadius: 4,
+                    //         ),
+                    //       ],
+                    //     ),
+                    //     child: const Text(
+                    //       'LIVE VIEW',
+                    //       style: TextStyle(
+                    //         fontWeight: FontWeight.bold,
+                    //         fontSize: 12,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
@@ -160,9 +286,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
-                          '3 Nearby',
-                          style: TextStyle(
+                        child: Text(
+                          isLoadingCafes
+                              ? 'Loading...'
+                              : '\${nearbyCafes.length} Nearby',
+                          style: const TextStyle(
                             color: Color(0xFF2563EB),
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
@@ -172,43 +300,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Alert Cards
-                  AlertCard(
-                    icon: Icons.shopping_cart,
-                    iconBackgroundColor: const Color(0xFFEFF6FF),
-                    iconColor: const Color(0xFF2563EB),
-                    title: 'Groceries near Home',
-                    distance: '200m away',
-                    isActive: groceriesActive,
-                    onChanged: (val) => setState(() => groceriesActive = val),
-                  ),
-                  AlertCard(
-                    icon: Icons.local_cafe,
-                    iconBackgroundColor: const Color(0xFFFFF7ED),
-                    iconColor: const Color(0xFFEA580C),
-                    title: '20% off at Local Cafe',
-                    distance: '450m away',
-                    isActive: cafeActive,
-                    onChanged: (val) => setState(() => cafeActive = val),
-                  ),
-                  AlertCard(
-                    icon: Icons.menu_book,
-                    iconBackgroundColor: const Color(0xFFFAF5FF),
-                    iconColor: const Color(0xFF9333EA),
-                    title: 'Study hours near Library',
-                    distance: '1.2km away',
-                    isActive: libraryActive,
-                    onChanged: (val) => setState(() => libraryActive = val),
-                  ),
-                  AlertCard(
-                    icon: Icons.fitness_center,
-                    iconBackgroundColor: const Color(0xFFF3F4F6),
-                    iconColor: Colors.grey.shade500,
-                    title: 'Gym Session',
-                    distance: '3.5km away',
-                    isActive: gymActive,
-                    onChanged: (val) => setState(() => gymActive = val),
-                  ),
+
+                  if (isLoadingCafes)
+                    const Center(child: CircularProgressIndicator())
+                  else if (nearbyCafes.isEmpty)
+                    const Center(child: Text('No cafes found nearby'))
+                  else
+                    ...nearbyCafes.map(
+                      (cafe) => AlertCard(
+                        icon: Icons.local_cafe,
+                        iconBackgroundColor: const Color(0xFFFFF7ED),
+                        iconColor: const Color(0xFFEA580C),
+                        title: cafe.name,
+                        distance: cafe.distance < 1000
+                            ? '\${cafe.distance.toStringAsFixed(0)}m away'
+                            : '\${(cafe.distance / 1000).toStringAsFixed(1)}km away',
+                        isActive: true,
+                        onChanged: (val) {},
+                      ),
+                    ),
                 ],
               ),
             ),

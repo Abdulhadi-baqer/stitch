@@ -12,11 +12,7 @@ class NotificationScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF5A7E9A),
-              Color(0xFFD4E1EA),
-              Color(0xFF2C435A),
-            ],
+            colors: [Color(0xFF5A7E9A), Color(0xFFD4E1EA), Color(0xFF2C435A)],
             stops: [0.0, 0.5, 1.0],
           ),
         ),
@@ -35,10 +31,7 @@ class NotificationScreen extends StatelessWidget {
               ),
               const Text(
                 'Tuesday, October 24',
-                style: TextStyle(
-                  fontSize: 20,
-                  color: Color(0xFF374151),
-                ),
+                style: TextStyle(fontSize: 20, color: Color(0xFF374151)),
               ),
               const SizedBox(height: 48),
               // Notification Card
@@ -46,14 +39,14 @@ class NotificationScreen extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withAlpha((255 * 0.9).toInt()),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withAlpha((255 * 0.1).toInt()),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
-                    )
+                    ),
                   ],
                 ),
                 child: Column(
@@ -66,7 +59,11 @@ class NotificationScreen extends StatelessWidget {
                             color: const Color(0xFF2563EB),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Icon(Icons.notifications, color: Colors.white, size: 14),
+                          child: const Icon(
+                            Icons.notifications,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         const Text(
@@ -142,10 +139,17 @@ class NotificationScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            icon: const Icon(Icons.snooze, color: Colors.black87, size: 18),
+                            icon: const Icon(
+                              Icons.snooze,
+                              color: Colors.black87,
+                              size: 18,
+                            ),
                             label: const Text(
                               'Snooze',
-                              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -160,10 +164,17 @@ class NotificationScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            icon: const Icon(Icons.directions, color: Colors.white, size: 18),
+                            icon: const Icon(
+                              Icons.directions,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                             label: const Text(
                               'Open Map',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -175,19 +186,34 @@ class NotificationScreen extends StatelessWidget {
               const Spacer(),
               // Bottom Lock Screen Icons
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 30,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: Colors.black.withOpacity(0.2),
-                      child: const Icon(Icons.flashlight_on, color: Colors.white, size: 20),
+                      backgroundColor: Colors.black.withAlpha(
+                        (255 * 0.2).toInt(),
+                      ),
+                      child: const Icon(
+                        Icons.flashlight_on,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: Colors.black.withOpacity(0.2),
-                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      backgroundColor: Colors.black.withAlpha(
+                        (255 * 0.2).toInt(),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
