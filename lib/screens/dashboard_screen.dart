@@ -18,7 +18,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late GoogleMapController mapController;
-  final LatLng _center = const LatLng(29.378822, 47.999859);
+  LatLng _center = const LatLng(29.378822, 47.999859);
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -30,6 +30,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   StreamSubscription<Position>? _positionStreamSubscription;
   Set<String> notifiedCafeIds = {};
   Position? currentPosition;
+  Set<Marker> _markers = {};
 
   @override
   void initState() {
@@ -62,6 +63,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Position position = await Geolocator.getCurrentPosition();
       setState(() {
         currentPosition = position;
+        _center = LatLng(position.latitude, position.longitude);
+        mapController.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: _center, zoom: 15.4746),
+          ),
+        );
       });
 
       final placesService = PlacesService();
@@ -84,6 +91,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         nearbyCafes = cafes;
         isLoadingCafes = false;
+        _markers = _buildMarkers(cafes);
       });
 
       _startLocationStream();
@@ -138,9 +146,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (needsUiUpdate) {
             setState(() {
               nearbyCafes.sort((a, b) => a.distance.compareTo(b.distance));
+              _markers = _buildMarkers(nearbyCafes);
             });
           }
         });
+  }
+
+  Set<Marker> _buildMarkers(List<Cafe> cafes) {
+    return cafes.map((cafe) {
+      final distanceLabel = cafe.distance < 1000
+          ? '${cafe.distance.toStringAsFixed(0)}m away'
+          : '${(cafe.distance / 1000).toStringAsFixed(1)}km away';
+      return Marker(
+        markerId: MarkerId(cafe.id),
+        position: LatLng(cafe.lat, cafe.lon),
+        infoWindow: InfoWindow(title: cafe.name, snippet: distanceLabel),
+      );
+    }).toSet();
+  }
+
+  Future<void> _refreshCafes() async {
+    final position = currentPosition;
+    if (position == null) return;
+
+    setState(() => isLoadingCafes = true);
+
+    try {
+      final placesService = PlacesService();
+      final cafes = await placesService.getNearbyCafes(
+        position.latitude,
+        position.longitude,
+      );
+      print(cafes);
+      for (var cafe in cafes) {
+        cafe.distance = Geolocator.distanceBetween(
+          position.latitude,
+          position.longitude,
+          cafe.lat,
+          cafe.lon,
+        );
+      }
+
+      cafes.sort((a, b) => a.distance.compareTo(b.distance));
+
+      setState(() {
+        nearbyCafes = cafes;
+        isLoadingCafes = false;
+        _markers = _buildMarkers(cafes);
+      });
+    } catch (e) {
+      debugPrint('Error refreshing cafes: $e');
+      setState(() => isLoadingCafes = false);
+    }
   }
 
   @override
@@ -206,13 +263,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: GoogleMap(
                           myLocationEnabled: true,
                           mapType: MapType.normal,
-                          // mapId: 'AIzaSyBim3hUgjVXFWD5OngjgB0kOpYBvCfgoVc',
                           onMapCreated: _onMapCreated,
                           initialCameraPosition: CameraPosition(
                             target: _center,
-                            zoom: 14.4746,
+                            zoom: 15.4746,
                           ),
-                          // myLocationEnabled: false,
+                          markers: _markers,
                           zoomControlsEnabled: false,
                           gestureRecognizers:
                               <Factory<OneSequenceGestureRecognizer>>{
@@ -258,68 +314,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
             // Header
-            body: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
+            body: RefreshIndicator(
+              onRefresh: _refreshCafes,
+              color: const Color(0xFF2563EB),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 24),
 
-                  // Map View Container
-                  const SizedBox(height: 24),
-                  // Active Alerts Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'ACTIVE ALERTS',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          isLoadingCafes
-                              ? 'Loading...'
-                              : '\${nearbyCafes.length} Nearby',
-                          style: const TextStyle(
-                            color: Color(0xFF2563EB),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
+                    // Map View Container
+                    const SizedBox(height: 24),
+                    // Active Alerts Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'ACTIVE ALERTS',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (isLoadingCafes)
-                    const Center(child: CircularProgressIndicator())
-                  else if (nearbyCafes.isEmpty)
-                    const Center(child: Text('No cafes found nearby'))
-                  else
-                    ...nearbyCafes.map(
-                      (cafe) => AlertCard(
-                        icon: Icons.local_cafe,
-                        iconBackgroundColor: const Color(0xFFFFF7ED),
-                        iconColor: const Color(0xFFEA580C),
-                        title: cafe.name,
-                        distance: cafe.distance < 1000
-                            ? '\${cafe.distance.toStringAsFixed(0)}m away'
-                            : '\${(cafe.distance / 1000).toStringAsFixed(1)}km away',
-                        isActive: true,
-                        onChanged: (val) {},
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isLoadingCafes
+                                ? 'Loading...'
+                                : '${nearbyCafes.length} Nearby',
+                            style: const TextStyle(
+                              color: Color(0xFF2563EB),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                ],
+                    const SizedBox(height: 16),
+
+                    if (isLoadingCafes)
+                      const Center(child: CircularProgressIndicator())
+                    else if (nearbyCafes.isEmpty)
+                      const Center(child: Text('No cafes found nearby'))
+                    else
+                      ...nearbyCafes.map(
+                        (cafe) => AlertCard(
+                          icon: Icons.local_cafe,
+                          iconBackgroundColor: const Color(0xFFFFF7ED),
+                          iconColor: const Color(0xFFEA580C),
+                          title: cafe.name,
+                          distance: cafe.distance < 1000
+                              ? '\${cafe.distance.toStringAsFixed(0)}m away'
+                              : '\${(cafe.distance / 1000).toStringAsFixed(1)}km away',
+                          isActive: true,
+                          onChanged: (val) {},
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -328,10 +389,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await NotificationService().requestPermissions();
-          await NotificationService().showNotification(
-            title: 'Hello',
-            body: 'I am Abdulhadi from Kuwait',
-          );
+          if (nearbyCafes.isNotEmpty) {
+            final nearest = nearbyCafes.first; // already sorted by distance
+            await NotificationService().showNotification(
+              id: nearest.id.hashCode,
+              title: '☕ ${nearest.name} is nearby!',
+              body:
+                  'The closest cafe is ${nearest.distance < 1000 ? '${nearest.distance.toStringAsFixed(0)}m' : '${(nearest.distance / 1000).toStringAsFixed(1)}km'} away. Time for a coffee?',
+            );
+          } else {
+            await NotificationService().showNotification(
+              title: 'No cafes found',
+              body: 'Could not find any nearby cafes at your current location.',
+            );
+          }
         },
         backgroundColor: const Color(0xFF2563EB),
         foregroundColor: Colors.white,
@@ -349,7 +420,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(Icons.dashboard),
             label: 'DASHBOARD',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'MAP VIEW'),
+          // BottomNavigationBarItem(icon: Icon(Icons.map), label: 'MAP VIEW'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'SETTINGS',
