@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import '../models/cafe.dart';
 
 class PlacesService {
-  // Multiple mirrors — if one returns 504, we try the next
   static const List<String> _overpassMirrors = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
@@ -14,25 +13,41 @@ class PlacesService {
   Future<List<Cafe>> getNearbyCafes(
     double lat,
     double lon, {
-    double radius = 3000,
+    double radius = 1000,
   }) async {
-    // [timeout:10] tells the Overpass server to give up after 10s
-    // instead of hanging and eventually returning a 504
-    // Union query: catches amenity=cafe, amenity=coffee_shop,
-    // and any place whose name contains "cafe" or "coffee"
-    // (common in Kuwait where OSM tagging is inconsistent)
-    final query =
-        '''
-      [out:json][timeout:20];
+    final query = '''
+      [out:json][timeout:25];
       (
-        node(around:$radius,$lat,$lon)["amenity"="cafe"];
-        node(around:$radius,$lat,$lon)["amenity"="coffee_shop"];
-        node(around:$radius,$lat,$lon)["name"~"cafe|coffee|كافيه|قهوة",i];
+        nwr(around:$radius,$lat,$lon)["amenity"="cafe"];
+        nwr(around:$radius,$lat,$lon)["amenity"="coffee_shop"];
+        nwr(around:$radius,$lat,$lon)["amenity"="bistro"];
+        nwr(around:$radius,$lat,$lon)["shop"="coffee"];
+        nwr(around:$radius,$lat,$lon)["name"~"cafe|coffee|kafe|brew|espresso|latte|كافيه|كافيهـ|قهوة|كوفي",i];
       );
-      out body;
+      out center;
     ''';
+    return _queryOverpass(query, PlaceType.cafe);
+  }
 
-    debugPrint('[PlacesService] ▶ Querying ($lat, $lon) radius=${radius}m');
+  Future<List<Cafe>> getNearbyRestaurants(
+    double lat,
+    double lon, {
+    double radius = 1000,
+  }) async {
+    final query = '''
+      [out:json][timeout:25];
+      (
+        nwr(around:$radius,$lat,$lon)["amenity"="restaurant"];
+        nwr(around:$radius,$lat,$lon)["amenity"="fast_food"];
+        nwr(around:$radius,$lat,$lon)["amenity"="food_court"];
+      );
+      out center;
+    ''';
+    return _queryOverpass(query, PlaceType.restaurant);
+  }
+
+  Future<List<Cafe>> _queryOverpass(String query, PlaceType type) async {
+    debugPrint('[PlacesService] ▶ Querying ${type.name}s');
 
     for (int i = 0; i < _overpassMirrors.length; i++) {
       final url = _overpassMirrors[i];
@@ -43,7 +58,7 @@ class PlacesService {
       try {
         final response = await http
             .post(Uri.parse(url), body: {'data': query})
-            .timeout(const Duration(seconds: 15)); // client-side hard timeout
+            .timeout(const Duration(seconds: 30));
 
         debugPrint(
           '[PlacesService] ◀ HTTP ${response.statusCode} from mirror ${i + 1}',
@@ -54,19 +69,18 @@ class PlacesService {
             final data = json.decode(response.body);
             final List<dynamic> elements = data['elements'] ?? [];
             debugPrint('[PlacesService] ✅ Parsed ${elements.length} results');
-            return elements.map((json) => Cafe.fromJson(json)).toList();
+            return elements
+                .map((json) => Cafe.fromJson(json, type: type))
+                .toList();
           } catch (e) {
-            debugPrint(
-              '[PlacesService] ❌ JSON parse failed (HTML timeout page?): $e',
-            );
-            // Try next mirror
+            debugPrint('[PlacesService] ❌ JSON parse failed: $e');
             continue;
           }
         } else if (response.statusCode == 504 || response.statusCode == 429) {
           debugPrint(
             '[PlacesService] ⚠️ ${response.statusCode} from mirror ${i + 1}, trying next...',
           );
-          continue; // Try next mirror
+          continue;
         } else {
           debugPrint(
             '[PlacesService] ❌ Unexpected status ${response.statusCode}',
@@ -75,7 +89,7 @@ class PlacesService {
         }
       } catch (e) {
         debugPrint('[PlacesService] ❌ Mirror ${i + 1} failed: $e');
-        continue; // Try next mirror
+        continue;
       }
     }
 

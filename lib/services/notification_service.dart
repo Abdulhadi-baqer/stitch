@@ -1,5 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+enum NotificationChannel { cafe, restaurant }
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
   factory NotificationService() => _instance;
@@ -27,21 +29,17 @@ class NotificationService {
 
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle notification tapped logic here
-      },
+      onDidReceiveNotificationResponse: (NotificationResponse response) {},
     );
   }
 
   Future<void> requestPermissions() async {
-    // Request Android 13+ permissions
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.requestNotificationsPermission();
 
-    // Request iOS permissions
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
@@ -53,30 +51,42 @@ class NotificationService {
     int id = 0,
     required String title,
     required String body,
+    NotificationChannel channel = NotificationChannel.cafe,
     String? payload,
   }) async {
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails(
-          'main_channel',
-          'Main Channel',
-          channelDescription: 'Main channel for notifications',
+    final AndroidNotificationDetails androidDetails;
+    final DarwinNotificationDetails iosDetails;
+
+    switch (channel) {
+      case NotificationChannel.cafe:
+        androidDetails = const AndroidNotificationDetails(
+          'cafe_channel',
+          'Cafes',
+          channelDescription: 'Notifications for nearby cafes and coffee shops',
           importance: Importance.max,
           priority: Priority.high,
         );
-
-    const DarwinNotificationDetails iosNotificationDetails =
-        DarwinNotificationDetails();
-
-    const NotificationDetails notificationDetails = NotificationDetails(
-      android: androidNotificationDetails,
-      iOS: iosNotificationDetails,
-    );
+        iosDetails = const DarwinNotificationDetails(
+          threadIdentifier: 'cafe_channel',
+        );
+      case NotificationChannel.restaurant:
+        androidDetails = const AndroidNotificationDetails(
+          'restaurant_channel',
+          'Restaurants',
+          channelDescription: 'Notifications for nearby restaurants',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
+        iosDetails = const DarwinNotificationDetails(
+          threadIdentifier: 'restaurant_channel',
+        );
+    }
 
     await _notificationsPlugin.show(
       id: id,
       title: title,
       body: body,
-      notificationDetails: notificationDetails,
+      notificationDetails: NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload,
     );
   }
