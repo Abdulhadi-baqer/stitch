@@ -28,7 +28,7 @@ class NotificationService {
         );
 
     await _notificationsPlugin.initialize(
-      settings: initializationSettings,
+      initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {},
     );
   }
@@ -83,10 +83,10 @@ class NotificationService {
     }
 
     await _notificationsPlugin.show(
-      id: id,
-      title: title,
-      body: body,
-      notificationDetails: NotificationDetails(android: androidDetails, iOS: iosDetails),
+      id,
+      title,
+      body,
+      NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload,
     );
   }
