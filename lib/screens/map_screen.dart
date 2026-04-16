@@ -40,7 +40,7 @@ class MapScreenState extends State<MapScreen> {
   Set<Marker> _markers = {};
   Set<Circle> _circles = {};
 
-  double _searchRadius = 500;
+  double _searchRadius = 200;
   bool _cafesEnabled = true;
   bool _restaurantsEnabled = true;
   bool _isRefreshing = false;
@@ -178,34 +178,41 @@ class MapScreenState extends State<MapScreen> {
       });
     }
 
-    // Find the single nearest enabled place within the notify radius
-    // that hasn't been notified yet.
-    Cafe? nearest;
+    // Find the nearest unnotified cafe and nearest unnotified restaurant
+    // separately, then fire up to 2 notifications (one per type).
+    Cafe? nearestCafe;
+    Cafe? nearestRestaurant;
+
     for (var place in _places) {
-      final enabled = place.type == PlaceType.cafe
-          ? _cafesEnabled
-          : _restaurantsEnabled;
-      if (place.distance <= _notifyRadius &&
-          enabled &&
-          !_notifiedIds.contains(place.id)) {
-        nearest = place;
-        break; // _places is already sorted by distance, so first match = nearest
+      if (place.distance > _notifyRadius) break; // sorted, no need to continue
+
+      if (!_notifiedIds.contains(place.id)) {
+        if (place.type == PlaceType.cafe && _cafesEnabled && nearestCafe == null) {
+          nearestCafe = place;
+        } else if (place.type == PlaceType.restaurant && _restaurantsEnabled && nearestRestaurant == null) {
+          nearestRestaurant = place;
+        }
       }
+
+      if (nearestCafe != null && nearestRestaurant != null) break;
     }
 
-    if (nearest != null) {
-      _notifiedIds.add(nearest.id);
-      final isCafe = nearest.type == PlaceType.cafe;
+    void _notify(Cafe place) {
+      _notifiedIds.add(place.id);
+      final isCafe = place.type == PlaceType.cafe;
       NotificationService().showNotification(
-        id: nearest.id.hashCode,
-        title: '${nearest.name} is nearby!',
+        id: place.id.hashCode,
+        title: '${place.name} is nearby!',
         body:
-            'You\'re within ${nearest.distance.toStringAsFixed(0)}m of this ${isCafe ? 'cafe' : 'restaurant'}.',
+            'You\'re within ${place.distance.toStringAsFixed(0)}m of this ${isCafe ? 'cafe' : 'restaurant'}.',
         channel: isCafe
             ? NotificationChannel.cafe
             : NotificationChannel.restaurant,
       );
     }
+
+    if (nearestCafe != null) _notify(nearestCafe);
+    if (nearestRestaurant != null) _notify(nearestRestaurant);
   }
 
   void _startStream() {
@@ -541,8 +548,8 @@ class _RadiusSheetState extends State<_RadiusSheet> {
   late double _radius;
   bool _applying = false;
 
-  static const double _min = 500;
-  static const double _max = 10000;
+  static const double _min = 100;
+  static const double _max = 500;
 
   @override
   void initState() {
